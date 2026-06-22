@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>英単語クイズ Pro Secure (ローカル版)</title>
+<title>英単語クイズ Pro Secure (ローカル完結版)</title>
 <style>
 /* ===== 基本レイアウト ===== */
 * { box-sizing: border-box; }
@@ -70,40 +70,6 @@ button { padding: 10px 15px; cursor: pointer; border-radius: 6px; border: 1px so
     </button>
 </div>
 
-<section id="userPage" class="page active">
-  <div class="card" style="padding: 20px; max-width: 450px; margin: 0 auto 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <h2 style="color: #1a73e8; margin-top: 0; margin-bottom: 8px; font-size: 22px; text-align: center;">🚪 ログイン</h2>
-    <p style="color: #666; font-size: 13px; margin-bottom: 15px; text-align: center;">登録した名前を入力してください（ローカル保存版）</p>
-    
-    <div style="margin-bottom: 12px;">
-      <input type="text" id="loginNameInput" placeholder="名前 (例: tanaka)" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px;">
-    </div>
-    <div style="margin-bottom: 15px; display: none;">
-      <input type="password" id="loginPassInput" placeholder="パスワード" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px;">
-    </div>
-
-    <button onclick="handleSecureLogin()" class="btn-primary" style="width: 100%; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 16px; background: #1a73e8; border: none; color: white;">
-      ログインして学習を始める
-    </button>
-  </div>
-
-  <div class="card" style="padding: 20px; max-width: 450px; margin: auto; background: #f9f9f9; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-    <h3 style="margin-top: 0; margin-bottom: 5px; font-size: 18px; color: #333;">🌱 アカウント新規作成</h3>
-    <p style="font-size:12px; color:#666; margin-top:0; margin-bottom:15px;">※初めてアプリを使う場合はここで名前を入力してください</p>
-    
-    <div style="margin-bottom: 10px;">
-      <input type="text" id="newName" placeholder="新しい名前 (例: tanaka)" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px; display: none;">
-      <input type="password" id="newPass" placeholder="パスワード" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;">
-    </div>
-    
-    <button onclick="handleSecureRegister()" class="btn-primary" style="width:100%; padding: 10px; border-radius: 6px; font-weight: bold; background: #4caf50; border: none; color: white;">
-      アカウントを新規作成する
-    </button>
-  </div>
-</section>
-
 <section id="homePage" class="page">
   <div class="card" style="text-align: center; padding: 20px;">
     <h2 id="welcomeUser" style="margin-top:0;">こんにちは！</h2>
@@ -155,7 +121,7 @@ button { padding: 10px 15px; cursor: pointer; border-radius: 6px; border: 1px so
         ⚙️ アプリ設定
       </button>
       <button onclick="logout()" style="padding: 12px 5px; border-radius: 12px; font-weight: bold; background: #ffebee; border: 1px solid #ffcdd2; color: #c62828;">
-        🚪 ログアウト
+        🔄 リロード
       </button>
     </div>
   </div>
@@ -1466,13 +1432,12 @@ const words = [
 ];
 
 /* ===== 定数・変数定義 ===== */
-/* ===== 定数・変数定義 ===== */
 let SECTION_SIZE = 10;
 let TEST_QUESTION_COUNT = 5;
 let progress = {};
 let current = null;
 let currentSection = 1;
-let currentUser = ""; // 現在のユーザー名
+let currentUser = "user"; 
 let studyCount = 0;
 let upper = false;
 let isReviewMode = false;
@@ -1496,13 +1461,11 @@ const LEVEL_CONFIG = {
 };
 
 let isDiagnosticMode = false;
-let diagnosticStage = 1;     // 現在のステージ (1=中1, 2=中2, 3=中3)
-let diagnosticStageCorrect = 0; // 現在のステージでの正解数
+let diagnosticStage = 1;     
+let diagnosticStageCorrect = 0; 
 
-// --- 💾 データ保存・同期（LocalStorage版） ---
+// --- 💾 データ保存・同期（LocalStorage固定キー版） ---
 async function saveProgress() {
-    if (!currentUser) return;
-    
     const dataToSave = {
         progress: progress,
         studyCount: studyCount,
@@ -1519,13 +1482,11 @@ async function saveProgress() {
         isAllWordsMode: isAllWordsMode
     };
     
-    // ユーザーごとにキーを分けて保存
-    localStorage.setItem("local_voca_data_" + currentUser.toLowerCase(), JSON.stringify(dataToSave));
+    localStorage.setItem("voca_pro_save_data", JSON.stringify(dataToSave));
 }
 
-async function loadUserData(userName) {
-    if (!userName) return null;
-    const json = localStorage.getItem("local_voca_data_" + userName.toLowerCase());
+async function loadUserData() {
+    const json = localStorage.getItem("voca_pro_save_data");
     if (json) {
         const data = JSON.parse(json);
         progress = data.progress || {};
@@ -1546,7 +1507,6 @@ async function loadUserData(userName) {
         return data;
     }
     
-    // データがない場合は初期化
     progress = {};
     studyCount = 0;
     reviewWrongWords = [];
@@ -1561,87 +1521,10 @@ async function loadUserData(userName) {
     return null;
 }
 
-// --- 🚪 ログイン・登録処理 ---
-window.handleSecureLogin = async function() {
-    const nameInput = document.getElementById("loginNameInput");
-    if (!nameInput) return;
-
-    const inputName = nameInput.value.trim();
-
-    if (!inputName) {
-        alert("名前を入力してください。");
-        return;
-    }
-
-    // 登録ユーザーリストに存在するか確認
-    let usersList = JSON.parse(localStorage.getItem("local_voca_users_list") || "[]");
-    if (!usersList.map(u => u.toLowerCase()).includes(inputName.toLowerCase())) {
-        alert("❌ アカウントが見つかりません。下の「新規作成」からアカウントを作成してください。");
-        return;
-    }
-
-    currentUser = inputName;
-    localStorage.setItem("secure_currentUserName", currentUser);
-
-    await loadUserData(currentUser);
-
-    if (typeof updateHomeDashboard === 'function') updateHomeDashboard();
-    if (typeof window.renderSectionButtons === 'function') window.renderSectionButtons();
-
-    nameInput.value = "";
-    window.showPage("homePage");
-};
-
-window.handleSecureRegister = async function() {
-    const nameInput = document.getElementById("newName");
-    if (!nameInput) return;
-
-    const inputName = nameInput.value.trim();
-
-    if (!inputName) {
-        alert("新規作成する名前を入力してください。");
-        return;
-    }
-    if (/[.$#[\]@ ]/.test(inputName)) {
-        alert("名前には記号やスペースは使用できません。");
-        return;
-    }
-
-    let usersList = JSON.parse(localStorage.getItem("local_voca_users_list") || "[]");
-    if (usersList.map(u => u.toLowerCase()).includes(inputName.toLowerCase())) {
-        alert(`❌ 「${inputName}」はすでに使用されています。別の名前で作成してください。`);
-        return;
-    }
-
-    // 名簿リストへ追加
-    usersList.push(inputName);
-    localStorage.setItem("local_voca_users_list", JSON.stringify(usersList));
-
-    currentUser = inputName;
-    localStorage.setItem("secure_currentUserName", currentUser);
-    
-    // 初期状態でデータ構築保存
-    await loadUserData(currentUser);
-    await saveProgress();
-
-    alert(`🎉 アカウント「${currentUser}」を正常に新規作成しました！`);
-
-    nameInput.value = "";
-
-    if (typeof window.renderListSectionSelect === 'function') window.renderListSectionSelect();
-    if (typeof updateHomeDashboard === 'function') updateHomeDashboard();
-    if (typeof window.renderSectionButtons === 'function') window.renderSectionButtons();
-    
-    window.showPage("homePage");
-};
-
 window.logout = function() {
-    const confirmLogout = confirm("アプリからログアウトしてログイン画面に戻りますか？");
+    const confirmLogout = confirm("学習状況を保存して、ホーム画面をリフレッシュしますか？");
     if (!confirmLogout) return;
-
-    localStorage.removeItem("secure_currentUserName");
-    currentUser = "";
-    window.showPage("userPage");
+    location.reload();
 };
     
 // 🚀 実力診断テストを開始する関数
@@ -1900,7 +1783,7 @@ window.showPage = function(id) {
     if (typeof resetQuizUI === 'function') resetQuizUI();
 
     if (document.getElementById("welcomeUser")) {
-      document.getElementById("welcomeUser").textContent = `こんにちは、${currentUser}さん！`;
+      document.getElementById("welcomeUser").textContent = `こんにちは！`;
     }
 
     if (typeof updateHomeDashboard === 'function') updateHomeDashboard(); 
@@ -1945,8 +1828,6 @@ function determineTodaySection() {
 
 // --- クイズロジック ---
 window.startTodayLesson = async function() {
-    if (!currentUser) return;
-
     if (isSuspended) {
         isSuspended = false; 
         isReviewMode = false;
@@ -2775,30 +2656,12 @@ window.resetQuizUI = function() {
 };
 
 window.deleteCurrentUserAccount = async function() {
-    if (!currentUser) return alert("ユーザーデータが見つかりません。");
-
-    const confirm1 = confirm(`【重大な警告】\n現在ログイン中のデータ「 ${currentUser} 」を完全に削除しますか？\nこの操作は取り消せません。`);
+    const confirm1 = confirm(`【重大な警告】\nすべての学習ログ、合格履歴、苦手単語データが完全に消去され、元に戻せなくなります。本当に初期化しますか？`);
     if (!confirm1) return;
 
-    // ローカルデータの削除
-    localStorage.removeItem("local_voca_data_" + currentUser.toLowerCase());
-    
-    // 名簿リストから除外
-    let usersList = JSON.parse(localStorage.getItem("local_voca_users_list") || "[]");
-    usersList = usersList.filter(u => u.toLowerCase() !== currentUser.toLowerCase());
-    localStorage.setItem("local_voca_users_list", JSON.stringify(usersList));
-
-    localStorage.removeItem("secure_currentUserName");
-    
-    currentUser = "";
-    progress = {};
-    studyCount = 0;
-    reviewWrongWords = [];
-    completedSections = [];
-    currentSection = 1;
-
-    alert(`データを完全に消去しました。`);
-    window.showPage("userPage");
+    localStorage.removeItem("voca_pro_save_data");
+    alert(`すべてのデータを初期化しました。`);
+    location.reload();
 };
 
 window.handleQuizCancelOrEndAction = function() {
@@ -2856,7 +2719,7 @@ function buildKeyboard() {
       }
       div.appendChild(btn);
     });
-    container.appendChild(btn);
+    container.appendChild(div);
   });
 }
 
@@ -2918,21 +2781,15 @@ async function init() {
   
   buildKeyboard();
 
-  // 自動ログインチェック（前回ログインしていた名前があれば即読み込み）
-  const savedName = localStorage.getItem("secure_currentUserName");
-  if (savedName) {
-      currentUser = savedName;
-      await loadUserData(currentUser);
-      
-      if (typeof window.renderListSectionSelect === 'function') {
-          window.renderListSectionSelect();
-      }
-      
-      updateHomeDashboard();
-      window.showPage("homePage");
-  } else {
-      window.showPage("userPage");
+  // 起動時にローカルストレージ固定キーから読込
+  await loadUserData();
+  
+  if (typeof window.renderListSectionSelect === 'function') {
+      window.renderListSectionSelect();
   }
+  
+  updateHomeDashboard();
+  window.showPage("homePage");
 }
 init();
 </script>
