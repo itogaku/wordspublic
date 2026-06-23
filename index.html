@@ -1640,26 +1640,30 @@ async function setFinalDiagnosticLevel(levelKey) {
     else if (levelKey === "chui3") recommendedIndex = 532;
     else if (levelKey === "saijoi") recommendedIndex = 735;
 
+    // 習得済みフラグ（correct）の補完
     for (let i = 0; i < recommendedIndex; i++) {
         const w = words[i];
         if (w && w.word) progress[w.word.toLowerCase()] = "correct"; 
     }
     
-    window.diagnosticPassedSections = [];
+    // 💡【修正の核心2】中断時にも、クリアしたセクション番号が漏れなく配列に同期されるように再計算します
+    if (!window.diagnosticPassedSections) window.diagnosticPassedSections = [];
     const targetSection = Math.floor(recommendedIndex / 10) + 1;
     for (let s = 1; s < targetSection; s++) {
         if (!window.diagnosticPassedSections.includes(s)) {
             window.diagnosticPassedSections.push(s);
         }
     }
-    currentSection = targetSection;
+    
+    // 現在の目標セクション位置を最終確定（すでに次のステージに進んでいれば、大きい方の数値を維持）
+    currentSection = Math.max(currentSection, targetSection);
 
+    // 🔑 最終的な状態をローカルストレージに確実に保存
     await saveProgress();
 
     if (typeof updateHomeDashboard === 'function') updateHomeDashboard();
     window.showPage("homePage");
 }
-    
 function getLevelInfoByNumber(num) {
     if (num <= 219) {
         return { text: "【中1】基礎クラス", sub: "英語の土台・日常の基本表現", color: "#1a73e8", bg: "#e3f2fd" };
@@ -2686,6 +2690,7 @@ window.deleteCurrentUserAccount = async function() {
 };
 
 window.handleQuizCancelOrEndAction = function() {
+    // Aパターン：通常のクイズ画面なら、今まで通り一覧画面に戻すだけ
     if (!isDiagnosticMode) {
         if (typeof window.goBackToListFromQuiz === 'function') {
             window.goBackToListFromQuiz();
@@ -2693,19 +2698,28 @@ window.handleQuizCancelOrEndAction = function() {
         return;
     }
 
-    const confirmEnd = confirm("ここで実力診断テストを終了し、現在のステージまでの結果で開始レベルを確定させますか？");
+    // Bパターン：実力診断テスト中の場合
+    const confirmEnd = confirm("ここで実力診断テストを終了し、現在クリアしているクラスまでの結果でホーム画面に戻りますか？");
     if (!confirmEnd) return;
 
+    // 💡【修正の核心】現在のステージ数だけで判断せず、すでに合格セクション（diagnosticPassedSections）が
+    // 記録されているかどうかを基準にして、最終スタート位置を安全に確定させます。
     let finalLevelKey = "chui1"; 
     
-    if (diagnosticStage === 1) {
-        finalLevelKey = "chui1";
-    } else if (diagnosticStage === 2) {
-        finalLevelKey = "chui2";
-    } else if (diagnosticStage === 3) {
+    if (!window.diagnosticPassedSections) window.diagnosticPassedSections = [];
+    
+    if (window.diagnosticPassedSections.includes(53)) {
+        // セクション53（中2の最後まで）クリア済みなら、中3からスタート
         finalLevelKey = "chui3";
+    } else if (window.diagnosticPassedSections.includes(22)) {
+        // セクション22（中1の最後まで）クリア済みなら、中2からスタート
+        finalLevelKey = "chui2";
+    } else {
+        // どこもクリアしていなければ中1からスタート
+        finalLevelKey = "chui1";
     }
 
+    // 確定関数を呼び出してホームへ
     if (typeof setFinalDiagnosticLevel === 'function') {
         setFinalDiagnosticLevel(finalLevelKey);
     } else {
