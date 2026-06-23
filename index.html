@@ -2012,6 +2012,9 @@ document.getElementById("nextBtn").addEventListener("click", () => {
 async function showTestResult() {
     isSuspended = false;
 
+    // ========================================================
+    // 🚀 【最優先割り込み】実力診断（サバイバルステージ）モードの判定処理
+    // ========================================================
     if (isDiagnosticMode) {
         document.getElementById("quizQuestionArea").classList.add("hidden");
         document.getElementById("answerControlArea").classList.add("hidden");
@@ -2024,11 +2027,12 @@ async function showTestResult() {
         }
 
         const resultView = document.getElementById("quizResultView");
-        const passThreshold = 8; 
+        const passThreshold = 8; // 🎯 昇格基準：10問中8問正解
         
         const stageCorrectCount = testLog.filter(i => i.status === "correct").length;
         const isStagePassed = (stageCorrectCount >= passThreshold);
 
+        // 解答リストテーブルの生成
         let listHtml = "";
         testLog.forEach(item => {
             const mark = item.status === "correct" ? "○" : "×";
@@ -2037,23 +2041,32 @@ async function showTestResult() {
         });
 
         if (isStagePassed && diagnosticStage < 3) {
+            // ========================================================
+            // 🟢 ステージ1 または 2 を突破（合格）した場合
+            // ========================================================
+            
+            // 💡【バグ修正の核心】「次のステージを開始する」画面が出た瞬間に合格データを即時セーブする！
             if (!window.diagnosticPassedSections) window.diagnosticPassedSections = [];
             let endSectionForThisStage = (diagnosticStage === 1) ? 22 : 53;
             let startSectionForThisStage = (diagnosticStage === 1) ? 1 : 23;
             
+            // 1. このステージに該当するセクションをすべて合格（パス）リストに放り込む
             for (let s = startSectionForThisStage; s <= endSectionForThisStage; s++) {
                 if (!window.diagnosticPassedSections.includes(s)) {
                     window.diagnosticPassedSections.push(s);
                 }
             }
+            // 2. 目標位置（学習再開位置）を次のステージの先頭へ更新
             currentSection = endSectionForThisStage + 1;
 
+            // 3. 該当範囲のwordsをすべて裏で「correct（習得済み）」に書き換える
             let recommendedIndex = (diagnosticStage === 1) ? 219 : 532;
             for (let i = 0; i < recommendedIndex; i++) {
                 const w = words[i];
                 if (w && w.word) progress[w.word.toLowerCase()] = "correct"; 
             }
 
+            // 4. 🔑 ここで即座にローカルストレージへ物理セーブを実行！これによって途中で中断してもデータが守られます
             await saveProgress();
 
             const nextStageNum = diagnosticStage + 1;
@@ -2065,7 +2078,7 @@ async function showTestResult() {
                 <p id="resultScore" style="font-size:32px; font-weight:bold; margin:15px 0; color:#4caf50;">10問中 ${stageCorrectCount}問 正解</p>
                 <div id="resultList" style="text-align:left; max-height:150px; overflow-y:auto; border:1px solid #eee; padding:10px; margin-bottom:20px; font-size:14px; background:#fafafa;">${listHtml}</div>
                 <p style="margin-bottom:20px; color:#666; font-size:14px; padding:0 10px;">
-                    基準（8割）をクリアしました！上のレベルへ昇格します。<br>
+                    基準（8割）をクリアしました！データは安全に保存されました。<br>
                     次は <strong>${nextStageName}</strong> に挑戦です！
                 </p>
                 <button id="diagnosticNextStageActionBtn" class="btn-primary" style="width: 100%; height: 50px; background: #9c27b0; font-size:16px; border:none; border-radius:6px; font-weight:bold; box-shadow: 0 4px 12px rgba(156,39,176,0.25);">
@@ -2077,16 +2090,21 @@ async function showTestResult() {
             };
 
         } else {
+            // ========================================================
+            // 🔴 不合格、または 👑 ステージ3（最終）も完全制覇した場合
+            // ========================================================
             let recommendedIndex = 0;
             let className = "";
 
             if (isStagePassed) {
+                // ステージ3（中3応用）も突破 ➔ 最上位クラス配属
                 recommendedIndex = 735; className = "【入試直前・最上位】";
                 if (!window.diagnosticPassedSections) window.diagnosticPassedSections = [];
                 for (let s = 1; s <= 74; s++) {
                     if (!window.diagnosticPassedSections.includes(s)) window.diagnosticPassedSections.push(s);
                 }
             } else {
+                // 途中のステージで不合格になった場合
                 if (diagnosticStage === 1) { recommendedIndex = 0; className = "【中1・基礎】"; }
                 else if (diagnosticStage === 2) { recommendedIndex = 219; className = "【中2・標準】"; }
                 else { recommendedIndex = 532; className = "【中3・入試応用】"; }
@@ -2132,6 +2150,9 @@ async function showTestResult() {
         return;
     }
 
+    // ========================================================
+    // 📝 以下の通常リザルト処理（A〜C）
+    // ========================================================
     document.getElementById("quizQuestionArea").classList.add("hidden");
     document.getElementById("answerControlArea").classList.add("hidden");
     document.getElementById("quizKeyboard").classList.add("hidden");
